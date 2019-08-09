@@ -85,34 +85,33 @@ void recursive_dirbit_tea_scan(char *dir)
 			continue;
 		}
 		size_t dirlen = strlen(dir);
-    	size_t filenamelen = strlen(namelist[n]->d_name);
-    	char tmp_set[dirlen + filenamelen + 3];
-    	memcpy(tmp_set, dir, dirlen);
-    	tmp_set[dirlen] = '/';
-    	memcpy(tmp_set+dirlen+1, namelist[n]->d_name, filenamelen);
-    	tmp_set[dirlen + filenamelen + 1] = '\0';
+		size_t filenamelen = strlen(namelist[n]->d_name);
+		char tmp_set[dirlen + filenamelen + 3];
+		memcpy(tmp_set, dir, dirlen);
+		tmp_set[dirlen] = '/';
+		memcpy(tmp_set+dirlen+1, namelist[n]->d_name, filenamelen);
+		tmp_set[dirlen + filenamelen + 1] = '\0';
+		free(namelist[n]);
+		namelist[n] = NULL;
 
-    	free(namelist[n]);
-	    namelist[n] = NULL;
+		if (lstat(tmp_set, &stfile) == -1) {
+			printf("Cannot stat file: %s\n", tmp_set);
+			continue;
+		}
 
-	    if (lstat(tmp_set, &stfile) == -1) {
-	    	printf("Cannot stat file: %s\n", tmp_set);
-	    	continue;
-	    }
+		if ((stfile.st_mode & S_IFMT) == S_IFDIR) {
+			recursive_dirbit_tea_scan(tmp_set);
+		} else {
 
-	    if ((stfile.st_mode & S_IFMT) == S_IFDIR) {
-	    	recursive_dirbit_tea_scan(tmp_set);
-	    } else {
+			if ((hash_table_count + 5) >= hash_table_allocated) {
+				hash_table_allocated += HASH_TABLE_GROWTH_SIZE;
+				hash_tables = (dirbit_tea_hash_table **)realloc(hash_tables, sizeof(dirbit_tea_hash_table *) * hash_table_allocated);
+			}
 
-	    	if ((hash_table_count + 5) >= hash_table_allocated) {
-	    		hash_table_allocated += HASH_TABLE_GROWTH_SIZE;
-	    		hash_tables = (dirbit_tea_hash_table **)realloc(hash_tables, sizeof(dirbit_tea_hash_table *) * hash_table_allocated);
-	    	}
-
-	    	if (findOrFail(tmp_set, strlen(tmp_set), &stfile)) {
-	    		printf("Found changed/new file: %s\n", tmp_set);
-	    	}
-	    }
+			if (findOrFail(tmp_set, strlen(tmp_set), &stfile)) {
+				printf("Found changed/new file: %s\n", tmp_set);
+			}
+		}
 	}
 	free(namelist);
 	namelist = NULL;
